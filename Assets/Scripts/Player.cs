@@ -4,7 +4,7 @@ using UnityEngine;
 
 public class Player : MonoBehaviour
 {
-	public enum movementState
+	public enum MovementState
 	{
 		frozen,
 		walking,
@@ -13,7 +13,7 @@ public class Player : MonoBehaviour
 
 	[Header("Proporties")]
 
-	public movementState moveState;
+	public MovementState moveState;
 
 	public float speed = 10f;
 
@@ -21,7 +21,7 @@ public class Player : MonoBehaviour
 
 	public float gravity = -0.1f;
 
-	public float jumpPower = 0.01f;
+	public float jumpPower = 100000f;
 
 	private float turnVel;
 	private Vector3 gravityVel;
@@ -71,21 +71,26 @@ public class Player : MonoBehaviour
 	{
 		switch (moveState)
 		{
-			case movementState.frozen:
+			case MovementState.frozen: // not moving
 				break;
-			case movementState.walking:
+			case MovementState.walking: // walking on the ground
 				Move();
-				Jump();
+				
+				if (Jump())
+				{
+					moveState = MovementState.jumping;
+				}
+
 				Gravity();
 
 				break;
-			case movementState.jumping:
+			case MovementState.jumping: // in the air
 				Move();
 				Gravity();
 
 				if (controller.isGrounded)
 				{
-					moveState = movementState.walking;
+					moveState = MovementState.walking;
 				}
 
 				break;
@@ -112,9 +117,9 @@ public class Player : MonoBehaviour
 
 			Vector3 moveDir = Quaternion.Euler(0f, targetAngle, 0f) * Vector3.forward;// make it so the player moves in the direction they look
 
-			float magnitude = Mathf.Clamp01(moveDir.magnitude);
+			float magnitude = Mathf.Clamp01(moveDir.magnitude);// determine how powerful the movement direction is using magnitude before normalisation
 
-			controller.Move(moveDir.normalized * magnitude * speed * Time.deltaTime);
+			controller.Move(magnitude * speed * Time.deltaTime * moveDir.normalized);
 		}
 	}
 
@@ -132,13 +137,15 @@ public class Player : MonoBehaviour
 		controller.Move(gravityVel);
 	}
 
-	void Jump()
+	bool Jump()
 	{
 		if (Input.GetButtonDown("Jump")) 
 		{
-			moveState = movementState.jumping;
+			gravityVel.y = Mathf.Sqrt(jumpPower * -2.0f * gravity * Time.deltaTime);
 
-			gravityVel.y = Mathf.Sqrt(jumpPower * -2.0f * gravity);
+			return true;
 		}
+
+		return false;
 	}
 }
