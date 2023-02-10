@@ -111,7 +111,10 @@ public class Player : MonoBehaviour
 			// moving the player
 
 			Vector3 moveDir = Quaternion.Euler(0f, targetAngle, 0f) * Vector3.forward;// make it so the player moves in the direction they look
-			controller.Move(moveDir.normalized * speed * Time.deltaTime);
+
+			float magnitude = Mathf.Clamp01(moveDir.magnitude);
+
+			controller.Move(moveDir.normalized * magnitude * speed * Time.deltaTime);
 		}
 	}
 
