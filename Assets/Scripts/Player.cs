@@ -8,7 +8,8 @@ public class Player : MonoBehaviour
 	{
 		frozen,
 		walking,
-		jumping
+		jumping,
+		dbJumping
 	}
 
 	[Header("Proporties")]
@@ -21,7 +22,7 @@ public class Player : MonoBehaviour
 
 	public float gravity = -0.1f;
 
-	public float jumpPower = 100000f;
+	public float jumpPower = 0.005f;
 
 	private float turnVel;
 	private Vector3 gravityVel;
@@ -86,6 +87,22 @@ public class Player : MonoBehaviour
 				break;
 			case MovementState.jumping: // in the air
 				Move();
+
+				if (Jump())
+				{
+					moveState = MovementState.dbJumping;
+				}
+
+				Gravity();
+
+				if (controller.isGrounded)
+				{
+					moveState = MovementState.walking;
+				}
+
+				break;
+			case MovementState.dbJumping:
+				Move();
 				Gravity();
 
 				if (controller.isGrounded)
@@ -141,7 +158,7 @@ public class Player : MonoBehaviour
 	{
 		if (Input.GetButtonDown("Jump")) 
 		{
-			gravityVel.y = Mathf.Sqrt(jumpPower * -2.0f * gravity * Time.deltaTime);
+			gravityVel.y = Mathf.Sqrt(jumpPower * -2.0f * gravity);
 
 			return true;
 		}
