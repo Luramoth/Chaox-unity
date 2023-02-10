@@ -26,6 +26,9 @@ public class Player : MonoBehaviour
 	private float turnVel;
 	private Vector3 gravityVel;
 
+	[SerializeField]
+	private float forceMagnetude;
+
 	[Header("References")]
 
 	public CharacterController controller;
@@ -47,6 +50,21 @@ public class Player : MonoBehaviour
 	void Update()
 	{
 		StateBlock();
+	}
+
+	// executes when tyhe controller hits a rigidbody
+	private void OnControllerColliderHit(ControllerColliderHit hit)
+	{
+		Rigidbody rigidbody = hit.collider.attachedRigidbody;
+
+		if (rigidbody != null)
+		{
+			Vector3 forceDir = hit.gameObject.transform.position - transform.position;
+			forceDir.y = 0f;
+			forceDir.Normalize();
+
+			rigidbody.AddForceAtPosition(forceDir * forceMagnetude, transform.position, ForceMode.Impulse);
+		}
 	}
 
 	void StateBlock()
