@@ -79,12 +79,15 @@ public class Player : MonoBehaviour
 		{
 			moveState = MovementState.rolling;
 
+			bool wasGrounded = controller.isGrounded;
+
 			controller.enabled = false;
 			rb.isKinematic = false;
 
 			Vector3 vel = new(controller.velocity.x, Mathf.Clamp(controller.velocity.y, -5,5), controller.velocity.z);
 
 			rb.velocity = vel;
+			rb.angularVelocity = wasGrounded ? Vector3.zero : cam.right * 10;
 		}
 
 		switch (moveState)
@@ -130,10 +133,13 @@ public class Player : MonoBehaviour
 				break;
 			case MovementState.rolling: // rolling
 
+				Roll();
+
 				if (Input.GetButtonUp("Crouch"))
 				{
-					controller.enabled = true;
-					rb.isKinematic = true;
+					Vector3 TargetAngle = new(0f, cam.rotation.eulerAngles.y, 0f);
+					
+					StartCoroutine(LerpUp(Quaternion.Euler(TargetAngle), 0.1f));
 
 					moveState = controller.isGrounded ? MovementState.walking : MovementState.dbJumping;
 				}
@@ -143,9 +149,12 @@ public class Player : MonoBehaviour
 				break;
 		}
 
-		finalVel = walkvel + gravityVel;
+		if (controller.enabled)
+		{
+			finalVel = walkvel + gravityVel;
 
-		controller.Move(finalVel);
+			controller.Move(finalVel);
+		}
 	}
 
 	Vector3 Walk()
@@ -196,5 +205,40 @@ public class Player : MonoBehaviour
 		}
 
 		return false;
+	}
+
+	void Roll()
+	{
+		float horizontal = Input.GetAxisRaw("Horizontal");
+		float vertical = Input.GetAxisRaw("Vertical");
+
+		Vector3 direction= new(horizontal, 0f, vertical);
+
+		if(direction.magnitude > 0.1f)
+		{
+			float targetAngle = Mathf.Atan2(direction.x, direction.z) * Mathf.Rad2Deg + cam.eulerAngles.y;
+
+			Vector3 moveDir = Quaternion.Euler(0f, targetAngle, 0f) * Vector3.right;
+
+			float magnitude = Mathf.Clamp01(moveDir.magnitude);
+
+			rb.AddTorque(magnitude * 100000 * moveDir.normalized, ForceMode.Force);
+		}
+	}
+
+	IEnumerator LerpUp(Quaternion endValue, float duration)
+	{
+		float time = 0;
+		Quaternion startValue = transform.rotation;
+		while (time < duration)
+		{
+			transform.rotation = Quaternion.Lerp(startValue, endValue, time / duration);
+			time += Time.deltaTime;
+			yield return null;
+		}
+		transform.rotation = endValue;
+
+		controller.enabled = true;
+		rb.isKinematic = true;
 	}
 }
