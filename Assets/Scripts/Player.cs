@@ -32,6 +32,8 @@ public class Player : MonoBehaviour
 	private Vector3 gravityVel;
 	private Vector3 finalVel;
 
+	private MovementState LastState;
+
 	[SerializeField]
 	private float forceMagnetude;
 
@@ -75,28 +77,15 @@ public class Player : MonoBehaviour
 
 	void StateBlock()
 	{
-		if (Input.GetButtonDown("Crouch"))
-		{
-			moveState = MovementState.rolling;
-
-			bool wasGrounded = controller.isGrounded;
-
-			controller.enabled = false;
-			rb.isKinematic = false;
-
-			Vector3 vel = new(controller.velocity.x, Mathf.Clamp(controller.velocity.y, -5,5), controller.velocity.z);
-
-			rb.velocity = vel;
-			rb.angularVelocity = wasGrounded ? Vector3.zero : cam.right * 10;
-		}
-
 		switch (moveState)
 		{
 			case MovementState.frozen: // not moving
 				break;
 			case MovementState.walking: // walking on the ground
 				walkvel = Walk();
-				
+
+				IntoRoll();
+
 				if (Jump())
 				{
 					moveState = MovementState.jumping;
@@ -107,6 +96,8 @@ public class Player : MonoBehaviour
 				break;
 			case MovementState.jumping: // in the air
 				walkvel = Walk();
+
+				IntoRoll();
 
 				if (Jump())
 				{
@@ -125,6 +116,8 @@ public class Player : MonoBehaviour
 				walkvel = Walk();
 				Gravity();
 
+				IntoRoll();
+
 				if (controller.isGrounded)
 				{
 					moveState = MovementState.walking;
@@ -141,7 +134,7 @@ public class Player : MonoBehaviour
 					
 					StartCoroutine(LerpUp(Quaternion.Euler(TargetAngle), 0.1f));
 
-					moveState = controller.isGrounded ? MovementState.walking : MovementState.dbJumping;
+					moveState = controller.isGrounded ? MovementState.walking : LastState;
 				}
 
 				break;
@@ -240,5 +233,25 @@ public class Player : MonoBehaviour
 
 		controller.enabled = true;
 		rb.isKinematic = true;
+	}
+
+	void IntoRoll()
+	{
+		if (Input.GetButtonDown("Crouch") && controller.enabled)
+		{
+			LastState = moveState;
+
+			moveState = MovementState.rolling;
+
+			bool wasGrounded = controller.isGrounded;
+
+			controller.enabled = false;
+			rb.isKinematic = false;
+
+			Vector3 vel = new(controller.velocity.x, Mathf.Clamp(controller.velocity.y, -5, 5), controller.velocity.z);
+
+			rb.velocity = vel;
+			rb.angularVelocity = wasGrounded ? Vector3.zero : cam.right * 10;
+		}
 	}
 }
