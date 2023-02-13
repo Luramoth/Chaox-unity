@@ -1,5 +1,6 @@
 using System.Collections;
 using System.Collections.Generic;
+using UnityEditor;
 using UnityEngine;
 
 public class Player : MonoBehaviour
@@ -9,7 +10,8 @@ public class Player : MonoBehaviour
 		frozen,
 		walking,
 		jumping,
-		dbJumping
+		dbJumping,
+		rolling
 	}
 
 	[Header("Proporties")]
@@ -25,7 +27,10 @@ public class Player : MonoBehaviour
 	public float jumpPower = 0.005f;
 
 	private float turnVel;
+
+	private Vector3 walkvel;
 	private Vector3 gravityVel;
+	private Vector3 finalVel;
 
 	[SerializeField]
 	private float forceMagnetude;
@@ -34,9 +39,9 @@ public class Player : MonoBehaviour
 
 	public CharacterController controller;
 
-#pragma warning disable CS0108 // Member hides inherited member; missing new keyword
-	public Transform camera;
-#pragma warning restore CS0108 // Member hides inherited member; missing new keyword
+	public Transform cam;
+
+	public Rigidbody rb;
 
 	// Start is called before the first frame update
 	void Start()
@@ -70,12 +75,24 @@ public class Player : MonoBehaviour
 
 	void StateBlock()
 	{
+		if (Input.GetButtonDown("Crouch"))
+		{
+			moveState = MovementState.rolling;
+
+			controller.enabled = false;
+			rb.isKinematic = false;
+
+			Vector3 vel = new(controller.velocity.x, Mathf.Clamp(controller.velocity.y, -5,5), controller.velocity.z);
+
+			rb.velocity = vel;
+		}
+
 		switch (moveState)
 		{
 			case MovementState.frozen: // not moving
 				break;
 			case MovementState.walking: // walking on the ground
-				Move();
+				walkvel = Walk();
 				
 				if (Jump())
 				{
@@ -86,7 +103,7 @@ public class Player : MonoBehaviour
 
 				break;
 			case MovementState.jumping: // in the air
-				Move();
+				walkvel = Walk();
 
 				if (Jump())
 				{
@@ -101,8 +118,8 @@ public class Player : MonoBehaviour
 				}
 
 				break;
-			case MovementState.dbJumping:
-				Move();
+			case MovementState.dbJumping: // double jumping
+				walkvel = Walk();
 				Gravity();
 
 				if (controller.isGrounded)
@@ -111,12 +128,27 @@ public class Player : MonoBehaviour
 				}
 
 				break;
+			case MovementState.rolling: // rolling
+
+				if (Input.GetButtonUp("Crouch"))
+				{
+					controller.enabled = true;
+					rb.isKinematic = true;
+
+					moveState = controller.isGrounded ? MovementState.walking : MovementState.dbJumping;
+				}
+
+				break;
 			default:
 				break;
 		}
+
+		finalVel = walkvel + gravityVel;
+
+		controller.Move(finalVel);
 	}
 
-	void Move()
+	Vector3 Walk()
 	{
 		float horizontal = Input.GetAxisRaw("Horizontal");
 		float vertical = Input.GetAxisRaw("Vertical");
@@ -126,7 +158,7 @@ public class Player : MonoBehaviour
 		if (direction.magnitude >= 0.1f)
 		{
 			// turning the player model (Mesh)
-			float targetAngle = Mathf.Atan2(direction.x, direction.z) * Mathf.Rad2Deg + camera.eulerAngles.y;// determine what direction the player should turn to
+			float targetAngle = Mathf.Atan2(direction.x, direction.z) * Mathf.Rad2Deg + cam.eulerAngles.y;// determine what direction the player should turn to
 			float angle = Mathf.SmoothDampAngle(transform.eulerAngles.y, targetAngle, ref turnVel, turnSpeed);// smooth it out to the mesh doesent just snap in every direction
 			transform.rotation = Quaternion.Euler(0f, angle, 0);// turn the mesh
 
@@ -136,8 +168,10 @@ public class Player : MonoBehaviour
 
 			float magnitude = Mathf.Clamp01(moveDir.magnitude);// determine how powerful the movement direction is using magnitude before normalisation
 
-			controller.Move(magnitude * speed * Time.deltaTime * moveDir.normalized);
+			return magnitude * speed * Time.deltaTime * moveDir.normalized;
 		}
+
+		return Vector3.zero;
 	}
 
 	void Gravity()
@@ -150,8 +184,6 @@ public class Player : MonoBehaviour
 		gravityVel.y += gravity * Time.deltaTime;
 
 		gravityVel.y = Mathf.Clamp(gravityVel.y, -0.5f, 0.5f);
-
-		controller.Move(gravityVel);
 	}
 
 	bool Jump()
