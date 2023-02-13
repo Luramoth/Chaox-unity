@@ -160,7 +160,7 @@ public class Player : MonoBehaviour
 		if (direction.magnitude >= 0.1f)
 		{
 			// turning the player model (Mesh)
-			float targetAngle = Mathf.Atan2(direction.x, direction.z) * Mathf.Rad2Deg + cam.eulerAngles.y;// determine what direction the player should turn to
+			float targetAngle = (Mathf.Atan2(direction.x, direction.z) * Mathf.Rad2Deg) + cam.eulerAngles.y;// determine what direction the player should turn to
 			float angle = Mathf.SmoothDampAngle(transform.eulerAngles.y, targetAngle, ref turnVel, turnSpeed);// smooth it out to the mesh doesent just snap in every direction
 			transform.rotation = Quaternion.Euler(0f, angle, 0);// turn the mesh
 
